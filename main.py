@@ -8,9 +8,11 @@ hour, minutes, second = input("Enter the Time = ").split(":")    #splitting inpu
 
 shedule_date = datetime.date(int(day), int(month), int(year))    #converting input values into interger
 
+shedule_date = datetime.date(int(day), int(month), int(year))    #converting input values into interger
+
 n = 1
 
-while n > 0:
+while n > 0
     
     if time.localtime().tm_hour == int(hour) and time.localtime().tm_min == int(minutes) and time.localtime().tm_sec == int(second) and datetime.date.today() == shedule_date:
         
