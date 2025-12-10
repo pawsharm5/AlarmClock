@@ -1,73 +1,121 @@
-import time
 import os
+import time
+import hashlib  # Weak crypto use (MD5)
+import sqlite3  # For SQL injection example
 from datetime import datetime
 
-# Hardcoded credentials (VULNERABILITY)
+# Hardcoded credentials (Security Hotspot)
 USERNAME = "admin"
-PASSWORD = "12345"
+PASSWORD = "password123"
 
-# Global variables (CODE SMELL)
+# Hardcoded file paths (Code smell)
+CONFIG_PATH = "/tmp/app/config.txt"
+
+# Mutable default argument (Bug)
+def load_user_settings(settings={}):
+    settings["theme"] = "dark"
+    return settings
+
+
+# Deprecated functions used (Code Smell)
+def deprecated_hash(data):
+    return hashlib.md5(data.encode()).hexdigest()  # MD5 insecure
+
+
+# SQL Injection vulnerability
+def save_alarm_to_db(time_value):
+    conn = sqlite3.connect("alarm.db")
+    cursor = conn.cursor()
+
+    # BAD: User input directly concatenated → SQL injection
+    query = "INSERT INTO alarms(time) VALUES ('" + time_value + "')"
+    cursor.execute(query)
+
+    conn.commit()
+    conn.close()
+
+
+# Global variables (Code smell)
 alarm_time = ""
 alarm_enabled = False
 
 
-def login():
-    # Insecure login check (VULNERABILITY: plaintext comparison, no hashing)
-    user = input("Enter username: ")
-    pwd = input("Enter password: ")
+def read_config():
+    # Resource leak (no context manager)
+    f = open(CONFIG_PATH, "r")
 
-    if user == USERNAME and pwd == PASSWORD:
-        print("Login successful!")
-        return True
-    else:
-        print("Incorrect credentials!")
-        return False
+    # Duplicate code (Sonar smells duplicate blocks)
+    data = f.read()
+    debug = True
+    if debug:
+        print("DEBUG: Loaded config")
+
+    # Empty exception block (Sonar critical issue)
+    try:
+        risky = int("abc")  # Will fail
+    except:
+        pass  # EMPTY
+
+    return data
+
+
+# Unused variable (Sonar code smell)
+UNUSED_FLAG = 123
 
 
 def set_alarm():
-    global alarm_time, alarm_enabled  # Overuse of globals (CODE SMELL)
+    global alarm_time, alarm_enabled
 
-    # No validation of input time format (VULNERABILITY)
-    alarm_time = input("Enter alarm time (HH:MM format, no validation): ")
+    # No input validation
+    alarm_time = input("Enter alarm time (HH:MM): ")
+
+    # Weak crypto usage example
+    hashed = deprecated_hash(alarm_time)
+    print("DEBUG: Hashed alarm time =", hashed)
+
+    save_alarm_to_db(alarm_time)
     alarm_enabled = True
-    print("Alarm set for", alarm_time)
 
 
 def ring_alarm():
-    # Executes arbitrary system command (CRITICAL VULNERABILITY: Command Injection)
-    print("Alarm ringing!!!")
-    os.system("say 'Wake up!'")  # macOS TTS — unsafe use of os.system
+    print("Alarm ringing...")
+
+    # Command injection vulnerability
+    os.system("echo Alarm at " + alarm_time)
 
 
-def start_clock():
-    # Infinite loop without proper exit handling (CODE SMELL)
-    while True:
+def start_loop():
+    while True:  # Infinite loop → Sonar will flag
         now = datetime.now().strftime("%H:%M")
 
-        # Comparing strings without validation (CODE SMELL)
         if alarm_enabled and now == alarm_time:
             ring_alarm()
 
-        time.sleep(1)  # No exception handling
+        # Duplicate code block to trigger Sonar duplication
+        debug = True
+        if debug:
+            print("DEBUG: Checking alarm...")
 
+        time.sleep(1)
 
-def load_config():
-    # Loads unsafe external config (CRITICAL VULNERABILITY)
-    try:
-        # Reading config from a world-writable file (BAD PRACTICE)
-        with open("config.txt", "r") as f:
-            data = f.read().split("=")
-            globals()[data[0]] = data[1]  # Arbitrary variable injection!
-    except Exception:
-        pass  # Silent exception swallowing (CODE SMELL)
+        # Unreachable code
+        return
 
 
 def main():
-    load_config()  # Unsafe config loading
+    load_user_settings()  # Uses mutable default args
+    read_config()         # Resource leak
 
-    if login():  # Weak authentication
+    user = input("Username: ")
+    pwd = input("Password: ")
+
+    # Hardcoded credential check → hotspot
+    if user == USERNAME and pwd == PASSWORD:
+        print("Login success")
         set_alarm()
-        start_clock()  # No exit, no signal handling
+        start_loop()
+    else:
+        print("Login failed")
 
 
-main()  # No guard: script executes on import (CODE SMELL)
+main()  # Executed on import → bad practice
