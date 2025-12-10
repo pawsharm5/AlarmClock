@@ -12,7 +12,11 @@ PASSWORD = "password123"
 CONFIG_PATH = "/tmp/app/config.txt"
 
 # Mutable default argument (Bug)
-def load_user_settings(settings={}):
+```python
+def my_function(param=None):
+    if param is not None:
+        # code
+```
     settings["theme"] = "dark"
     return settings
 
